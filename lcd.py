@@ -10,6 +10,7 @@ class LCD16X1:
         self.lcdInit()
 
     def lcdInit(self):
+        self.sleep_ms(20)
         self.lcdSendCMD(0x33)
         self.lcdSendCMD(0x32)   # 0x33, 0x32 is for 4 bit mode lcd initializing
         self.lcdSendCMD(0x28)   # 0x28 2 line, 5*7 matrix character
@@ -32,6 +33,7 @@ class LCD16X1:
         self.lcdSendByte(data | 0x04)
         self.sleep_us(1)
         self.lcdSendByte(data)
+        self.sleep_ms(5)
 
     def lcdSendByte(self, data):
         self.dataByte[0] = data
