@@ -62,7 +62,7 @@ def webPage():
                     };
                     xhttp.open("GET", "?cmd=currentNumber", true);
                     xhttp.send();
-                    setTimeout(updateNumber, 250);
+                    setTimeout(updateNumber, 500);
                 }
                 updateNumber();
             </script>
@@ -143,7 +143,7 @@ def loop():
         global data, currentNumber, oldNumber
         data = dict((name, value.value()) for (name, value) in pins.items())
         if data['reset'] == 0:
-            currentNumber = oldNumber = 0
+            currentNumber = 0
 
         addition = (not data['increment']) - (not data['decrement'])
         currentNumber += addition
