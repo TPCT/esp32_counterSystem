@@ -1,19 +1,13 @@
-from machine import Pin, I2C, freq
+from machine import Pin, I2C
 from utime import sleep_ms
 from lcd import LCD16X1
-from esp import osdebug
 from gc import collect
+
 import _thread
 import network
-try:
-    import usocket as socket
-except:
-    import socket
+import socket
 
-osdebug(None)
 collect()
-
-freq(240000000)
 
 wifiName = 'esp32'
 wifiPassword = 'Th3@Professional'
@@ -24,8 +18,10 @@ pins = {
     'internalLed': Pin(2, Pin.OUT)
 }
 currentNumber = 0
+oldNumber = -1
 data = dict()
-serverSocket = None
+serverSocket: socket.socket = None
+
 i2c = I2C(scl=Pin(22), sda=Pin(21), freq=int(240E6))
 lcd = LCD16X1(i2c, 39)
 
@@ -66,7 +62,7 @@ def webPage():
                     };
                     xhttp.open("GET", "?cmd=currentNumber", true);
                     xhttp.send();
-                    setTimeout(updateNumber, 500);
+                    setTimeout(updateNumber, 250);
                 }
                 updateNumber();
             </script>
@@ -85,66 +81,81 @@ def generateAp():
         pass
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     serverSocket.bind(('', 80))
-    serverSocket.listen(5)
+    serverSocket.listen(2)
     pins['internalLed'].value(0)
 
 
 def createServer():
     global serverSocket, currentNumber
+
     while True:
-        conn, addr = serverSocket.accept()
-        request = conn.recv(1024)
-        request = str(request)
+        socketConnection, clientAddress = serverSocket.accept()
+        request = socketConnection.recv(1024).decode()
+        headers = request.split('\n')
+        fileName = headers[0].split()[1]
 
-        inc = request.find('/?cmd=inc')
-        dec = request.find('/?cmd=dec')
-        reset = request.find('/?cmd=reset')
-        currentNumberPage = request.find('/?cmd=currentNumber')
-
-        if inc == 6:
+        if fileName == '/?cmd=inc':
             currentNumber += 1
-        if dec == 6:
+        elif fileName == '/?cmd=dec':
             currentNumber -= 1
-        if reset == 6:
+        elif fileName == '/?cmd=reset':
             currentNumber = 0
-
-        if currentNumberPage == 6:
-            conn.send('HTTP/1.1 200 OK\n')
-            conn.send('Content-Type: text/html\n')
-            conn.send('Connection: close\n\n')
-            conn.sendall('%s' % currentNumber)
-            conn.close()
+        elif fileName == '/?cmd=currentNumber':
+            try:
+                socketConnection.send('HTTP/1.1 200 OK\n')
+                socketConnection.send('Content-Type: text/html\n')
+                socketConnection.send('Connection: close\n\n')
+                socketConnection.send(str(currentNumber))
+            except OSError:
+                print('internal error occurred at line 120')
+            finally:
+                socketConnection.close()
+                continue
+        elif fileName == '/':
+            pass
+        else:
+            try:
+                socketConnection.send('HTTP/1.1 404 OK\n')
+                socketConnection.send('Content-Type: text/html\n')
+                socketConnection.send('Connection: close\n\n')
+                socketConnection.send('404 not found')
+            except OSError:
+                print('internal error occurred at line 129')
+            finally:
+                socketConnection.close()
+                pass
             continue
 
-        if any((inc == 6, dec == 6, reset == 6)):
-            lcd.writeString('current Num:' + str(currentNumber))
-
         response = webPage()
-        conn.send('HTTP/1.1 200 OK\n')
-        conn.send('Content-Type: text/html\n')
-        conn.send('Connection: close\n\n')
-        conn.sendall(response)
-        conn.close()
+        try:
+            socketConnection.send('HTTP/1.1 200 OK\n')
+            socketConnection.send('Content-Type: text/html\n')
+            socketConnection.send('Connection: close\n\n')
+            socketConnection.sendall(response)
+        except OSError:
+            print('internal error occurred at line 134')
+        finally:
+            socketConnection.close()
 
 
 def loop():
     while True:
-        global data, currentNumber
+        global data, currentNumber, oldNumber
         data = dict((name, value.value()) for (name, value) in pins.items())
         if data['reset'] == 0:
-            currentNumber = 0
-            lcd.writeString('current Num:' + str(currentNumber))
-            sleep_ms(200)
-            continue
+            currentNumber = oldNumber = 0
+
         addition = (not data['increment']) - (not data['decrement'])
         currentNumber += addition
-        if addition:
+
+        if currentNumber != oldNumber:
+            oldNumber = currentNumber
             lcd.writeString('current Num:' + str(currentNumber))
-        sleep_ms(300)
+
+        sleep_ms(250)
 
 
 lcd.writeString('Creating AP....')
 generateAp()
-serverThread = _thread.start_new_thread(createServer, tuple())
-lcd.writeString('current Num:' + str(currentNumber))
-loop()
+loopThread = _thread.start_new_thread(loop, ())
+serverThread = _thread.start_new_thread(createServer, ())
