@@ -1,5 +1,6 @@
 from machine import Pin, I2C
 from utime import sleep_ms
+
 from lcd import LCD16X1
 from ultrasonic import ultraSonic
 from gc import collect
@@ -38,6 +39,7 @@ oldNumber = -1
 currentDistance = 100
 doorStates = ('idle', 'request open', 'rejected')
 doorRequest = 0x00  # 0x00 to close the door, 0x01 to open the door, 0x02 stop accepting
+lastDoorRequest = 0x03
 clientsNumber = 0
 maxClientsNumber = 10
 
@@ -50,39 +52,21 @@ with open('mainAppIndex.html', 'r') as mainAppReader, open('index.html', 'r') as
     globals()['settingsHtml'] = settingsHtmlReader.read()
 
 
-def webPage(selector='index'):
-    if selector == 'mainApp':
-        return mainAppHtml
-    elif selector == 'doorApp':
-        return doorAppHtml
-    elif selector == 'index':
-        return indexHtml
-
-
-def generateAp():
+def generateAp(essid, password, authMode=network.AUTH_WPA2_PSK, maxClients=1):
     global serverSocket
     pins['internalLed'].value(1)
     ap = network.WLAN(network.AP_IF)
+    ap.config(essid=essid, password=password, authmode=authMode, max_clients=maxClients)
     ap.active(True)
-    ap.config(essid=wifiName, password=wifiPassword, authmode=network.AUTH_WPA2_PSK, max_clients=16)
+
     while not ap.active():
         pass
+
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     serverSocket.bind(('', 80))
     serverSocket.listen(5)
+
     pins['internalLed'].value(0)
-
-
-def sendResponse(socketConnection, response, statusCode=200, statusMsg='OK'):
-    try:
-        socketConnection.send('HTTP/1.1 %s %s\n' % (statusCode, statusMsg))
-        socketConnection.send('Content-Type: text/html\n')
-        socketConnection.send('Connection: close\n\n')
-        socketConnection.sendall(str(response))
-    except OSError:
-        pass
-    finally:
-        socketConnection.close()
 
 
 def createServer():
@@ -97,7 +81,7 @@ def createServer():
         requestType, fileName, *http = headers[0].split()
         postData = headers[-1]
         choice = postData.split("=")[-1]
-        print(request)
+
         if fileName == '/':
             sendResponse(socketConnection, webPage())
             continue
@@ -153,11 +137,34 @@ def createServer():
         sendResponse(socketConnection, 'Page not found', 404, 'NOT FOUND')
 
 
+def webPage(selector='index'):
+    if selector == 'mainApp':
+        return mainAppHtml
+    elif selector == 'doorApp':
+        return doorAppHtml
+    elif selector == 'index':
+        return indexHtml
+
+
+def sendResponse(socketConnection, response, statusCode=200, statusMsg='OK'):
+    try:
+        socketConnection.send('HTTP/1.1 %s %s\n' % (statusCode, statusMsg))
+        socketConnection.send('Content-Type: text/html\n')
+        socketConnection.send('Connection: close\n\n')
+        socketConnection.sendall(str(response))
+    except OSError:
+        pass
+    finally:
+        socketConnection.close()
+
+
 def mainApp():
     global data, currentNumber, oldNumber
     data = dict((name, value.value()) for (name, value) in pins.items())
     if data['reset'] == 0:
         currentNumber = 0
+        data['increment'] = 0
+        data['decrement'] = 0
 
     addition = (not data['increment']) - (not data['decrement'])
     currentNumber += addition
@@ -170,7 +177,7 @@ def mainApp():
 
 
 def doorApp():
-    global currentDistance, doorRequest
+    global currentDistance, doorRequest, lastDoorRequest
     currentDistance = int(uSonic1.readDistance())
 
     if doorRequest != 0x02:
@@ -179,7 +186,10 @@ def doorApp():
         else:
             doorRequest = 0x00
 
-    lcd.writeString(doorStates[doorRequest])
+    if lastDoorRequest != doorRequest and activeApp == 'doorApp':
+        lcd.writeString(doorStates[doorRequest])
+        lastDoorRequest = doorRequest
+
     sleep_ms(250)
 
 
@@ -196,6 +206,6 @@ def loop():
 
 if __name__ == '__main__':
     lcd.writeString('Creating AP....')
-    generateAp()
+    generateAp(wifiName, wifiPassword)
     serverThread = _thread.start_new_thread(createServer, ())
     loopThread = _thread.start_new_thread(loop(), ())
