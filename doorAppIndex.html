@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Th3 Professional Cod3r Server</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <style>
+        html{
+            display:inline-block;
+            margin: 0 auto;
+            text-align: center;
+        }
+        h1{
+            color: #0F3376; padding: 2vh;
+        }
+        p{
+            font-size: 1.5rem;
+        }
+        .button{
+            display: inline-block;
+            background-color: #e7bd3b;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            padding: 16px 40px;
+            text-decoration: none;
+            font-size: 30px;
+            margin: 2px;
+            cursor: pointer;
+        }
+        .button2{
+            background-color: #4286f4;
+        }
+    </style>
+</head>
+<body>
+    <form action="/doorApp" method="POST">
+        <h1>Th3 Professional Cod3r WebServer</h1>
+        <p>Current Request: <strong id="CR">%%Current Request%%</strong></p>
+        <p>Current Clients Count: <strong id="CN">%%Current Number%%</strong></p>
+        <p><input class="button button2" type="submit" name="choice" value="open" id="open" disabled></p>
+        <p><input class="button button2" type="submit"  name="choice" value="reset"></p>
+        <p><a class="button" href="/doorApp/settings">settings</a></p>
+    </form>
+    <script>
+        let lastRequest = "idle";
+        let lastClientNumber = 0;
+        let xhttp = new XMLHttpRequest();
+        function updateRequest(){
+            let currentRequest = "idle";
+            let currentClientNumber = 0;
+            xhttp.onreadystatechange = function() {
+                if (this.readyState === 4 && this.status === 200) {
+                    let response = xhttp.responseText.split("_");
+                    currentRequest = response[0];
+                    currentClientNumber = parseInt(response[1], 10);
+                    if (currentRequest !== lastRequest){
+                        document.getElementById("CR").innerHTML = currentRequest;
+                        if (currentRequest === 'request open'){
+                            document.getElementById('open').disabled = false;
+                        }else{
+                            document.getElementById('open').disabled = true;
+                        }
+                        lastRequest = currentRequest;
+                    }
+                    if (currentClientNumber !== lastClientNumber){
+                        document.getElementById("CN").innerHTML = currentClientNumber.toString();
+                        lastClientNumber = currentClientNumber;
+                    }
+                }
+            };
+            xhttp.open("GET", "/doorApp/request", true);
+            xhttp.send();
+            setTimeout(updateRequest, 250);
+        }
+        updateRequest();
+    </script>
+</body>
+</html>
