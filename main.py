@@ -32,15 +32,12 @@ settingsHtml: str = None
 i2c = I2C(scl=Pin(22), sda=Pin(21), freq=int(240E6))
 lcd = LCD16X1(i2c, 39)
 uSonic1 = ultraSonic(18, 19)
-#   uSonic2 = ultraSonic(4, 5)
-
 currentNumber = 0
 oldNumber = -1
 
 currentDistanceUSonic1 = 100
-#   currentDistanceUSonic2 = 100
 doorStates = ('idle', 'request', 'rejected')
-doorRequest = 0x00  # 0x00 to close the door, 0x01 to open the door, 0x02 stop accepting, 0x03 to open exit door
+doorRequest = 0x00  # 0x00 to close the door, 0x01 to open the door, 0x02 stop accepting
 lastDoorRequest = 0x03
 clientsNumber = 0
 maxClientsNumber = 10
@@ -82,11 +79,9 @@ def createServer():
         headers = request.split('\n')
         requestType, fileName, *http = headers[0].split()
         fileName = str(fileName).rstrip('/ \t\n')
-        postData = dict()
-        for post_data in headers[headers.index('\r'):]:
-            if '=' in post_data:
-                post_data = post_data.split('=')
-                postData[post_data[0]] = post_data[1]
+        postData = dict(tuple(post_data.split('=')[:2])
+                        if '=' in post_data else (post_data, '')
+                        for post_data in headers[headers.index('\r'):])
 
         if fileName == '' or fileName == 'index.html':
             sendResponse(socketConnection, webPage())
@@ -137,6 +132,7 @@ def createServer():
                     maxClientsNumber = int(number) if number else 0
                     doorRequest = 0x00
                     currentDistanceUSonic1 = 100
+                    
             sendResponse(socketConnection,
                          webPage('doorApp').replace('%%Current Number%%', str(clientsNumber))
                          .replace("%%Current Request%%", doorStates[doorRequest]))
@@ -191,7 +187,6 @@ def mainApp():
 def doorApp():
     global currentDistanceUSonic1, doorRequest, lastDoorRequest
     currentDistanceUSonic1 = int(uSonic1.readDistance())
-    #   currentDistanceUSonic2 = int(uSonic2.readDistance())
 
     if doorRequest != 0x02:
         if currentDistanceUSonic1 < 16:
