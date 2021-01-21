@@ -32,13 +32,15 @@ settingsHtml: str = None
 i2c = I2C(scl=Pin(22), sda=Pin(21), freq=int(240E6))
 lcd = LCD16X1(i2c, 39)
 uSonic1 = ultraSonic(18, 19)
+#   uSonic2 = ultraSonic(4, 5)
 
 currentNumber = 0
 oldNumber = -1
 
-currentDistance = 100
-doorStates = ('idle', 'request open', 'rejected')
-doorRequest = 0x00  # 0x00 to close the door, 0x01 to open the door, 0x02 stop accepting
+currentDistanceUSonic1 = 100
+#   currentDistanceUSonic2 = 100
+doorStates = ('idle', 'request', 'rejected')
+doorRequest = 0x00  # 0x00 to close the door, 0x01 to open the door, 0x02 stop accepting, 0x03 to open exit door
 lastDoorRequest = 0x03
 clientsNumber = 0
 maxClientsNumber = 10
@@ -71,7 +73,7 @@ def generateAp(essid, password, authMode=network.AUTH_WPA2_PSK, maxClients=1):
 
 def createServer():
     global serverSocket, currentNumber, activeApp, \
-           doorRequest, clientsNumber, currentDistance, \
+           doorRequest, clientsNumber, currentDistanceUSonic1, \
            maxClientsNumber
 
     while True:
@@ -79,10 +81,14 @@ def createServer():
         request = socketConnection.recv(4096).decode()
         headers = request.split('\n')
         requestType, fileName, *http = headers[0].split()
-        postData = headers[-1]
-        choice = postData.split("=")[-1]
+        fileName = str(fileName).rstrip('/ \t\n')
+        postData = dict()
+        for post_data in headers[headers.index('\r'):]:
+            if '=' in post_data:
+                post_data = post_data.split('=')
+                postData[post_data[0]] = post_data[1]
 
-        if fileName == '/':
+        if fileName == '' or fileName == 'index.html':
             sendResponse(socketConnection, webPage())
             continue
 
@@ -90,15 +96,16 @@ def createServer():
             sendResponse(socketConnection, currentNumber)
             continue
 
-        if fileName == '/mainApp':
+        if fileName == '/mainApp' or fileName == '/mainApp/index.html':
             activeApp = 'mainApp'
-            if choice == 'increment':
-                currentNumber += 1
-            elif choice == 'decrement':
-                currentNumber -= 1
-            elif choice == 'reset':
-                currentNumber = 0
-
+            if requestType == 'POST':
+                choice = postData.get('choice')
+                if choice == 'increment':
+                    currentNumber += 1
+                elif choice == 'decrement':
+                    currentNumber -= 1
+                elif choice == 'reset':
+                    currentNumber = 0
             sendResponse(socketConnection, webPage('mainApp').replace('%%Current Number%%', str(currentNumber)))
             continue
 
@@ -106,31 +113,36 @@ def createServer():
             sendResponse(socketConnection, doorStates[doorRequest] + "_%s" % clientsNumber)
             continue
 
-        if fileName == '/doorApp':
+        if fileName == '/doorApp' or fileName == '/doorApp/index.html':
             activeApp = 'doorApp'
-            currentDistance = 0
-            if choice == 'open':
-                if clientsNumber < maxClientsNumber:
+            currentDistanceUSonic1 = 100
+            choice = postData.get('choice')
+            number = postData.get('number')
+            if requestType == 'POST':
+                if choice == 'enter':
+                    if clientsNumber < maxClientsNumber:
+                        doorRequest = 0x00
+                        clientsNumber += 1
+                    else:
+                        doorRequest = 0x02
+                elif choice == 'exit':
+                    if clientsNumber > 0:
+                        doorRequest = 0x00
+                        clientsNumber -= 1
+                elif choice == 'reset':
                     doorRequest = 0x00
-                    clientsNumber += 1
-                else:
-                    doorRequest = 0x02
-            elif choice == 'reset':
-                doorRequest = 0x00
-                clientsNumber = 0
-            else:
-                postData = postData.strip().split('=')
-                if postData[0] == 'number':
-                    maxClientsNumber = int(postData[1])
+                    clientsNumber = 0
+                elif number:
+                    clientsNumber = 0
+                    maxClientsNumber = int(number) if number else 0
                     doorRequest = 0x00
-                    currentDistance = 0
-
+                    currentDistanceUSonic1 = 100
             sendResponse(socketConnection,
                          webPage('doorApp').replace('%%Current Number%%', str(clientsNumber))
                          .replace("%%Current Request%%", doorStates[doorRequest]))
             continue
 
-        if fileName == '/doorApp/settings':
+        if fileName == '/doorApp/settings' or fileName == '/doorApp/settings/index.html':
             sendResponse(socketConnection, settingsHtml)
             continue
 
@@ -177,11 +189,12 @@ def mainApp():
 
 
 def doorApp():
-    global currentDistance, doorRequest, lastDoorRequest
-    currentDistance = int(uSonic1.readDistance())
+    global currentDistanceUSonic1, doorRequest, lastDoorRequest
+    currentDistanceUSonic1 = int(uSonic1.readDistance())
+    #   currentDistanceUSonic2 = int(uSonic2.readDistance())
 
     if doorRequest != 0x02:
-        if currentDistance < 16:
+        if currentDistanceUSonic1 < 16:
             doorRequest = 0x01
         else:
             doorRequest = 0x00
