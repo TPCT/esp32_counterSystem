@@ -38,7 +38,8 @@
         <h1>Th3 Professional Cod3r WebServer</h1>
         <p>Current Request: <strong id="CR">%%Current Request%%</strong></p>
         <p>Current Clients Count: <strong id="CN">%%Current Number%%</strong></p>
-        <p><input class="button button2" type="submit" name="choice" value="open" id="open" disabled></p>
+        <p><input class="button button2" type="submit" name="choice" value="enter" id="enter" disabled></p>
+        <p><input class="button button2" type="submit" name="choice" value="exit" id="exit"></p>
         <p><input class="button button2" type="submit"  name="choice" value="reset"></p>
         <p><a class="button" href="/doorApp/settings">settings</a></p>
     </form>
@@ -54,13 +55,9 @@
                     let response = xhttp.responseText.split("_");
                     currentRequest = response[0];
                     currentClientNumber = parseInt(response[1], 10);
+                    document.getElementById('enter').disabled = !(currentRequest === 'request');
                     if (currentRequest !== lastRequest){
                         document.getElementById("CR").innerHTML = currentRequest;
-                        if (currentRequest === 'request open'){
-                            document.getElementById('open').disabled = false;
-                        }else{
-                            document.getElementById('open').disabled = true;
-                        }
                         lastRequest = currentRequest;
                     }
                     if (currentClientNumber !== lastClientNumber){
