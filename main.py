@@ -40,7 +40,7 @@ doorStates = ('idle', 'request', 'rejected')
 doorRequest = 0x00  # 0x00 to close the door, 0x01 to open the door, 0x02 stop accepting
 lastDoorRequest = 0x03
 clientsNumber = 0
-maxClientsNumber = 10
+maxClientsNumber = 3
 
 
 with open('mainAppIndex.html', 'r') as mainAppReader, open('index.html', 'r') as indexHtmlReader, \
@@ -84,6 +84,7 @@ def createServer():
                         for post_data in headers[headers.index('\r'):])
 
         if fileName == '' or fileName == 'index.html':
+            activeApp = ''
             sendResponse(socketConnection, webPage())
             continue
 
@@ -129,10 +130,10 @@ def createServer():
                     clientsNumber = 0
                 elif number:
                     clientsNumber = 0
-                    maxClientsNumber = int(number) if number else 0
+                    maxClientsNumber = int(number) if number and number >= 0 else 0
                     doorRequest = 0x00
                     currentDistanceUSonic1 = 100
-                    
+
             sendResponse(socketConnection,
                          webPage('doorApp').replace('%%Current Number%%', str(clientsNumber))
                          .replace("%%Current Request%%", doorStates[doorRequest]))
