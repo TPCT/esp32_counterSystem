@@ -176,12 +176,12 @@ def createServer():
                 choice = postData.get('choice')     # get the value of choice if exists else it will return none
                 if choice == 'increment':
                     # if the user clicked increment button in front-end
-                    # checking if the number of max 999 because free space in lcd is 3 digits
-                    currentNumber = (currentNumber + 1) if currentNumber < 999 else -999
+                    # checking if the number of max 9999 because free space in lcd is 4 digits
+                    currentNumber = (currentNumber + 1) if currentNumber < 9999 else -9999
                 elif choice == 'decrement':
                     # if the user clicked decrement button in front-end
-                    # checking if the number is greater than -999 because free space in lcd is 3 digits
-                    currentNumber = (currentNumber - 1) if currentNumber > -999 else 999
+                    # checking if the number is greater than -9999 because free space in lcd is 4 digits
+                    currentNumber = (currentNumber - 1) if currentNumber > -9999 else 9999
                 elif choice == 'reset':
                     # if the user clicked reset button in front-end
                     # setting the current number to 0
@@ -327,6 +327,8 @@ def mainApp():
 
     addition = (not data['increment']) - (not data['decrement'])
     currentNumber += addition
+    currentNumber = -9999 if currentNumber > 9999 else currentNumber
+    currentNumber = 9999 if currentNumber < -9999 else currentNumber
 
     if currentNumber != oldNumber:
         oldNumber = currentNumber
