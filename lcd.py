@@ -4,7 +4,7 @@ class LCD16X1:
     def __init__(self, i2CProtocol: I2C, address: int):
         # using PCF8574
         # from P0 to P7 is the output data
-        # p0(0x0[0,1])   -> register select{1: for data, 0: for command}
+        # p0(0x0[0, 1])  -> register select{1: for data, 0: for command}
         # p1(0x0[0, 2])  -> read/write {0: for write, 1: read}
         # p2(0x0[0, 4])  -> enable {falling edge trail}
         # p3(0x0[0, 8])  -> enable/disable gate of transistor responsible for backlight control

@@ -396,7 +396,7 @@ def loop():
 
 if __name__ == '__main__':  # checking if the app is running or imported
     lcd.writeString('Creating AP....')
-    generateAp(wifiName, wifiPassword)
+    generateAp(wifiName, wifiPassword, maxClients=16)
     loopThread = _thread.start_new_thread(loop, ())     # creating a thread so we don't use interrupt
     serverThread = _thread.start_new_thread(createServer, ())   # creating a thread so we don't use interrupt
 
