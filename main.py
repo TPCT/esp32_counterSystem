@@ -31,8 +31,12 @@ indexHtml: str = ''     # used to save the read html text from index.html
 settingsHtml: str = ''  # used to save the read html text from settings.html
 styleSheet: str = ''    # used to save the read css text from styleSheet.css
 
-i2c = I2C(-1, scl=Pin(22), sda=Pin(21), freq=int(240E6))  # activating i2c serial protocol at pins(21, 22) with freq 240 MH
-lcd = LCD16X1(i2c, 0x27)  # used to bind with lcd using i2c having slave address 0x27 (39d)
+try:  
+    i2c = I2C(-1, scl=Pin(22), sda=Pin(21), freq=int(240E6))  # activating i2c serial protocol at pins(21, 22) with freq 240 MH
+    lcd = LCD16X1(i2c, 0x27)  # used to bind with lcd using i2c having slave address 0x27 (39d)
+except Exception as e:
+    pass
+
 currentNumber = 0   # used to save the current number value
 oldNumber = -1      # used to save the last current number value (they are not equal to make lcd print the value at first run)
 
@@ -324,9 +328,9 @@ def mainApp():
     data = dict((name, value.value()) for (name, value) in pins.items())
     if data['reset'] == 0x00:
         currentNumber = 0x00
+        
         data['increment'] = 0x01
         data['decrement'] = 0x01
-
     addition = (not data['increment']) - (not data['decrement'])
     currentNumber += addition
     currentNumber = -9999 if currentNumber > 9999 else currentNumber
@@ -335,7 +339,6 @@ def mainApp():
     if currentNumber != oldNumber:
         oldNumber = currentNumber
         lcd.writeString('current Num:' + str(currentNumber))
-
     sleep_ms(250)
 
 
