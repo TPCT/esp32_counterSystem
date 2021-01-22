@@ -31,7 +31,8 @@ indexHtml: str = ''     # used to save the read html text from index.html
 settingsHtml: str = ''  # used to save the read html text from settings.html
 styleSheet: str = ''    # used to save the read css text from styleSheet.css
 
-try:  
+lcd = None
+try:
     i2c = I2C(-1, scl=Pin(22), sda=Pin(21), freq=int(240E6))  # activating i2c serial protocol at pins(21, 22) with freq 240 MH
     lcd = LCD16X1(i2c, 0x27)  # used to bind with lcd using i2c having slave address 0x27 (39d)
 except Exception as e:
@@ -181,11 +182,11 @@ def createServer():
                 if choice == 'increment':
                     # if the user clicked increment button in front-end
                     # checking if the number of max 9999 because free space in lcd is 4 digits
-                    currentNumber = (currentNumber + 1) if currentNumber < 9999 else -9999
+                    currentNumber = (currentNumber + 1) if currentNumber < 9999 else -999
                 elif choice == 'decrement':
                     # if the user clicked decrement button in front-end
                     # checking if the number is greater than -9999 because free space in lcd is 4 digits
-                    currentNumber = (currentNumber - 1) if currentNumber > -9999 else 9999
+                    currentNumber = (currentNumber - 1) if currentNumber > -999 else 9999
                 elif choice == 'reset':
                     # if the user clicked reset button in front-end
                     # setting the current number to 0
@@ -328,17 +329,16 @@ def mainApp():
     data = dict((name, value.value()) for (name, value) in pins.items())
     if data['reset'] == 0x00:
         currentNumber = 0x00
-        
         data['increment'] = 0x01
         data['decrement'] = 0x01
     addition = (not data['increment']) - (not data['decrement'])
     currentNumber += addition
-    currentNumber = -9999 if currentNumber > 9999 else currentNumber
-    currentNumber = 9999 if currentNumber < -9999 else currentNumber
+    currentNumber = -999 if currentNumber > 9999 else currentNumber
+    currentNumber = 9999 if currentNumber < -999 else currentNumber
 
     if currentNumber != oldNumber:
         oldNumber = currentNumber
-        lcd.writeString('current Num:' + str(currentNumber))
+        lcd.writeString('current Num:' + str(currentNumber)) if lcd else None
     sleep_ms(250)
 
 
@@ -371,7 +371,7 @@ def doorApp():
         doorRequest = 0x00
 
     if lastDoorRequest != doorRequest:
-        lcd.writeString(doorStates[doorRequest])
+        lcd.writeString(doorStates[doorRequest]) if lcd else None
         lastDoorRequest = doorRequest
 
     sleep_ms(250)
@@ -392,12 +392,12 @@ def loop():
         elif activeApp == 'doorApp':
             doorApp()
         else:
-            lcd.writeString('waiting...')
+            lcd.writeString('waiting...') if lcd else None
             sleep_ms(250)
 
 
 if __name__ == '__main__':  # checking if the app is running or imported
-    lcd.writeString('Creating AP....')
+    lcd.writeString('Creating AP....') if lcd else None
     generateAp(wifiName, wifiPassword, maxClients=16)
     loopThread = _thread.start_new_thread(loop, ())     # creating a thread so we don't use interrupt
     serverThread = _thread.start_new_thread(createServer, ())   # creating a thread so we don't use interrupt
