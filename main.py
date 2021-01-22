@@ -215,6 +215,8 @@ def createServer():
                     # it will check if clients number > 0 else it will do nothing
                     if clientsNumber > 0:
                         clientsNumber -= 1
+                    else:
+                        doorRequest = 0x02
                 elif choice == 'reset':
                     # if the user clicked reset button in front-end then it resets the system
                     clientsNumber = 0
@@ -347,8 +349,6 @@ def doorApp():
     if door status is not rejected then it measures the distance from ultra sonic as ultra sonic reads distance up to 4m
     so we need to detect if there's a real client or not; so we made the max distance between ultrasonic and the client
     should be less than 16 cms.
-    if there's a client and request is not rejected, it will set door status to request so the server worker notice that
-    some one tries to enter the place.
     then comparing the last captured door request by the current captured door request
     if they are not equal then we need to write this to the lcd, this to not to make the lcd keep writing the values
     then settings the last captured door request to the current captured door request.
@@ -362,11 +362,10 @@ def doorApp():
     global currentDistanceUSonic1, doorRequest, lastDoorRequest
     currentDistanceUSonic1 = int(uSonic1.readDistance())
 
-    if doorRequest != 0x02:
-        if currentDistanceUSonic1 < 16:
-            doorRequest = 0x01
-        else:
-            doorRequest = 0x00
+    if currentDistanceUSonic1 < 16:
+        doorRequest = 0x01
+    else:
+        doorRequest = 0x00
 
     if lastDoorRequest != doorRequest:
         lcd.writeString(doorStates[doorRequest])
