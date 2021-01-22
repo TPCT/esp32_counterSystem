@@ -66,10 +66,9 @@ def generateAp(essid: str, password: str, authMode=network.AUTH_WPA2_PSK, maxCli
     =------------------------------------------------------------------------------------------------------------------=
                                             *specifications and requirements*
         setting and configuring the wifi interface of mcu
-        making a tcp socket server at local ip address of mcu (192.168.4.1) then listening for requests to accept.
-        turning off the led after activating the AP and creating the web socket.
+        activating the AP
+        turning off the led after activating the AP.
     =------------------------------------------------------------------------------------------------------------------=
-        :var serverSocket: global variable, used in create server function (socket)
         :var pins:         global variable, used to set, read value of GPIO pins used in project 1 (main app)
         :var ap:           local variable, used to save wireless interface class to configure access point
         :param essid:       the access point name
@@ -90,12 +89,7 @@ def generateAp(essid: str, password: str, authMode=network.AUTH_WPA2_PSK, maxCli
 
     while not ap.active():  # empty loop to hang the system up until the access point starts
         pass
-
-    serverSocket = socket.socket(socket.AF_INET,
-                                 socket.SOCK_STREAM)  # creating web socket (address family ipv4, socket protocol TCP)
-    serverSocket.bind(('', 80))     # binding the web socket at mcu local ip address at port 80 (web surfing port)
-    serverSocket.listen(5)          # listening for incoming requests at max of 5 in queue before rejection
-
+    
     pins['internalLed'].value(0)    # setting GPIO 2 to low after setting the server and access point
 
 
@@ -146,7 +140,12 @@ def createServer():
     global serverSocket, currentNumber, activeApp, \
         doorRequest, clientsNumber, currentDistanceUSonic1, \
         maxClientsNumber
-
+    
+    serverSocket = socket.socket(socket.AF_INET,
+                                 socket.SOCK_STREAM)  # creating web socket (address family ipv4, socket protocol TCP)
+    serverSocket.bind(('', 80))     # binding the web socket at mcu local ip address at port 80 (web surfing port)
+    serverSocket.listen(5)          # listening for incoming requests at max of 5 in queue before rejection
+    
     while True:
         socketConnection, clientAddress = serverSocket.accept()     # hanging up until a request is received
         request = socketConnection.recv(4096).decode('utf-8', 'ignore')  # reading the request data (4 bytes at once)
@@ -185,7 +184,7 @@ def createServer():
                     currentNumber = (currentNumber + 1) if currentNumber < 9999 else -999
                 elif choice == 'decrement':
                     # if the user clicked decrement button in front-end
-                    # checking if the number is greater than -9999 because free space in lcd is 4 digits
+                    # checking if the number is greater than -999 because free space in lcd is 4 digits
                     currentNumber = (currentNumber - 1) if currentNumber > -999 else 9999
                 elif choice == 'reset':
                     # if the user clicked reset button in front-end
@@ -340,7 +339,7 @@ def mainApp():
         oldNumber = currentNumber
         lcd.writeString('current Num:' + str(currentNumber)) if lcd else None
     sleep_ms(250)
-
+    
 
 def doorApp():
     """
