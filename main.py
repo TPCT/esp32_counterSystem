@@ -6,14 +6,14 @@ from ultrasonic import ultraSonic
 from gc import collect, enable
 
 import _thread
-import network  
+import network
 import socket
 
-enable()        # to enable the automatic garbage collection
-collect()       # to collect the 0 reference variables (free up ram)
+enable()  # to enable the automatic garbage collection
+collect()  # to collect the 0 reference variables (free up ram)
 
 wifiName = 'esp32'  # the esp access point name
-wifiPassword = 'Th3@Professional'   # the esp access point password
+wifiPassword = 'Th3@Professional'  # the esp access point password
 activeApp = ''  # used to save the current working app, allowed values ('mainApp', 'doorApp')
 
 pins = {
@@ -21,36 +21,37 @@ pins = {
     'decrement': Pin(35, Pin.IN, Pin.PULL_UP),
     'reset': Pin(36, Pin.IN, Pin.PULL_UP),
     'internalLed': Pin(2, Pin.OUT, value=1)
-}   # used to save the GPIO pins and set if they are input (in pull up mode){34, 35, 36} or output (with value = 1){2}
-data = dict()   # used to save the value will be read from GPIO input pins
+}  # used to save the GPIO pins and set if they are input (in pull up mode){34, 35, 36} or output (with value = 1){2}
+data = dict()  # used to save the value will be read from GPIO input pins
 
 serverSocket: socket.socket = None  # used to save the web socket
-mainAppHtml: str = ''   # used to save the read html text from mainAppIndex.html
-doorAppHtml: str = ''   # used to save the read html text from doorAppIndex.html
-indexHtml: str = ''     # used to save the read html text from index.html
+mainAppHtml: str = ''  # used to save the read html text from mainAppIndex.html
+doorAppHtml: str = ''  # used to save the read html text from doorAppIndex.html
+indexHtml: str = ''  # used to save the read html text from index.html
 settingsHtml: str = ''  # used to save the read html text from settings.html
-styleSheet: str = ''    # used to save the read css text from styleSheet.css
+styleSheet: str = ''  # used to save the read css text from styleSheet.css
 
 lcd = None
 try:
-    i2c = I2C(-1, scl=Pin(22), sda=Pin(21), freq=int(240E6))  # activating i2c serial protocol at pins(21, 22) with freq 240 MH
+    i2c = I2C(-1, scl=Pin(22), sda=Pin(21),
+              freq=int(240E6))  # activating i2c serial protocol at pins(21, 22) with freq 240 MH
     lcd = LCD16X1(i2c, 0x27)  # used to bind with lcd using i2c having slave address 0x27 (39d)
 except Exception as e:
     pass
 
 # ================================================MAIN PROJECT VARIABLES================================================
-currentNumber = 0   # used to save the current number value
-oldNumber = -1      # used to save the last current number value (they are not equal to make lcd print the value at first run)
+currentNumber = 0  # used to save the current number value
+oldNumber = -1  # used to save the last current number value (they are not equal to make lcd print the value at first run)
 # ======================================================================================================================
 
 # ================================================Door Project Variables================================================
-uSonic1 = ultraSonic(18, 19)    # used to bind with ultrasonic at pins 18, 19
-currentDistanceUSonic1 = 100    # used to save the distance read from ultrasonic
-doorStates = ('idle', 'request', 'rejected')    # used to send status for the front-end by indexing
+uSonic1 = ultraSonic(18, 19)  # used to bind with ultrasonic at pins 18, 19
+currentDistanceUSonic1 = 100  # used to save the distance read from ultrasonic
+doorStates = ('idle', 'request', 'rejected')  # used to send status for the front-end by indexing
 doorRequest = 0x00  # 0x00 to close the door, 0x01 to open the door, 0x02 stop accepting
-lastDoorRequest = 0x03      # used to save the last door request (they are not equal to make lcd print the status at first run)
-clientsNumber = 0   # used to save the current clients number
-maxClientsNumber = 3    # used to save the max clients allowed to enter the place
+lastDoorRequest = 0x03  # used to save the last door request (they are not equal to make lcd print the status at first run)
+clientsNumber = 0  # used to save the current clients number
+maxClientsNumber = 3  # used to save the max clients allowed to enter the place
 # ======================================================================================================================
 
 # the context manager will define readers that will read html file and will close file descriptors after exiting from context
@@ -58,7 +59,7 @@ maxClientsNumber = 3    # used to save the max clients allowed to enter the plac
 with open('mainAppIndex.html', 'r') as mainAppReader, open('index.html', 'r') as indexHtmlReader, \
         open('doorAppIndex.html', 'r') as doorAppReader, open('settings.html', 'r') as settingsHtmlReader, \
         open('styleSheet.css', 'r') as styleSheetReader:
-    mainAppHtml = mainAppReader.read()     # reading 'mainAppIndex.html' and saving it mainAppHtml
+    mainAppHtml = mainAppReader.read()  # reading 'mainAppIndex.html' and saving it mainAppHtml
     indexHtml = indexHtmlReader.read()
     doorAppHtml = doorAppReader.read()
     settingsHtml = settingsHtmlReader.read()
@@ -82,7 +83,7 @@ def generateAp(essid: str, password: str, authMode=network.AUTH_WPA2_PSK, maxCli
         :return: None
     """
 
-    global serverSocket           # declaring the global variable so it can be set inside the function
+    global serverSocket  # declaring the global variable so it can be set inside the function
 
     ap = network.WLAN(network.AP_IF)  # setting the wlan interface to be access point (AP_IF)
     ap.config(essid=essid,
@@ -94,7 +95,7 @@ def generateAp(essid: str, password: str, authMode=network.AUTH_WPA2_PSK, maxCli
     while not ap.active():  # empty loop to hang the system up until the access point starts
         pass
 
-    pins['internalLed'].value(0)    # setting GPIO 2 to low after setting the server and access point
+    pins['internalLed'].value(0)  # setting GPIO 2 to low after setting the server and access point
 
 
 def createServer():
@@ -147,41 +148,48 @@ def createServer():
 
     serverSocket = socket.socket(socket.AF_INET,
                                  socket.SOCK_STREAM)  # creating web socket (address family ipv4, socket protocol TCP)
-    serverSocket.bind(('', 80))     # binding the web socket at mcu local ip address at port 80 (web surfing port)
-    serverSocket.listen(5)          # listening for incoming requests at max of 5 in queue before rejection
+    serverSocket.bind(('', 80))  # binding the web socket at mcu local ip address at port 80 (web surfing port)
+    serverSocket.listen(5)  # listening for incoming requests at max of 5 in queue before rejection
 
     while True:
-        socketConnection, clientAddress = serverSocket.accept()     # hanging up until a request is received
+        socketConnection, clientAddress = serverSocket.accept()  # hanging up until a request is received
         request = socketConnection.recv(4096).decode('utf-8', 'ignore')  # reading the request data (4 bytes at once)
-        headers = request.split('\n')    # splitting request line by line to get headers
-        requestType, fileName, *http = headers[0].split()   # splitting first header using spaces to parse request (request type, path, http type)
-        fileName = str(fileName).strip('/\t\n').lower()   # removing trailing (spaces, /, tabs, new lines) parse req. path (ex: /filename/ => filename)
-        getData = dict(tuple(get_data.split("=")[:2]
-                       if "=" in get_data else (get_data, '')
-                       for get_data in fileName.split("?")[-1].split("&")))     # reading the get data from the request url (ex: /?cmd=inc => getData[cmd] = inc)
+        headers = request.split('\n')  # splitting request line by line to get headers
+        # splitting first header using spaces to parse request (request type, path, http type)
+        requestType, fileName, *http = headers[0].split()
 
+        # removing trailing (spaces, /, tabs, new lines) parse req. path (ex: /filename/ => filename)
+        fileName = str(fileName).strip('/\t\n').lower()
+
+        # reading the get data from the request url (ex: /?cmd=inc => getData[cmd] = inc)
+        getData = dict(tuple(get_data.split("=")[:2]
+                             if "=" in get_data else (get_data, '')
+                             for get_data in fileName.split("?")[-1].split("&")))
+
+        # reading the post data from the request (the data sent by post request)
         postData = dict(tuple(post_data.split('=')[:2])
                         if '=' in post_data else (post_data, '')
-                        for post_data in headers[headers.index('\r'):])     # reading the post data from the request (the data sent by post request)
+                        for post_data in headers[headers.index('\r') + 1:]) if requestType == 'POST' else {}
 
         print(activeApp, fileName)
-        if fileName == 'stylesheet.css':    # accessing the stylesheet
+        if fileName == 'stylesheet.css':  # accessing the stylesheet
             sendResponse(socketConnection, webPage('styleSheet'), contentType='text/css')
             continue
 
         if fileName == '' or fileName == 'index.html':  # accessing the main web page of local host ('' === '/')
             activeApp = ''  # setting the current active app to empty string.
-            sendResponse(socketConnection, webPage())   # return response to the client and close the connection
-            continue    # jump to the loop control
+            sendResponse(socketConnection, webPage())  # return response to the client and close the connection
+            continue  # jump to the loop control
 
         if fileName == 'mainapp/currentnumber' and activeApp == 'mainApp':
-            sendResponse(socketConnection, currentNumber)   # returning the current number as response and close the connection
+            sendResponse(socketConnection,
+                         currentNumber)  # returning the current number as response and close the connection
             continue
 
         if fileName == 'mainapp' or fileName == 'mainapp/index.html':
             activeApp = 'mainApp'
-            if requestType == 'POST':   # checking if the data is sent using post request
-                choice = postData.get('choice')     # get the value of choice if exists else it will return none
+            if requestType == 'POST':  # checking if the data is sent using post request
+                choice = postData.get('choice')  # get the value of choice if exists else it will return none
                 if choice == 'increment':
                     # if the user clicked increment button in front-end
                     # checking if the number of max 9999 because free space in lcd is 4 digits
@@ -204,12 +212,12 @@ def createServer():
             continue
 
         if fileName == 'doorapp' or fileName == 'doorapp/index.html':
-            activeApp = 'doorApp'   # setting the current active app to be door application
+            activeApp = 'doorApp'  # setting the current active app to be door application
             # settings door status to close (initial condition) to give idle state
             doorRequest = 0x00
-            currentDistanceUSonic1 = 100    # resetting the initial values of ultrasonic
-            choice = postData.get('choice')     # getting choice from the request if exists else None
-            number = postData.get('number')     # getting number from the request if exists else None
+            currentDistanceUSonic1 = 100  # resetting the initial values of ultrasonic
+            choice = postData.get('choice')  # getting choice from the request if exists else None
+            number = postData.get('number')  # getting number from the request if exists else None
             if requestType == 'POST':
                 if choice == 'enter':
                     # if the user clicked enter button in front-end
@@ -402,6 +410,5 @@ def loop():
 if __name__ == '__main__':  # checking if the app is running or imported
     lcd.writeString('Creating AP....') if lcd else None
     generateAp(wifiName, wifiPassword, maxClients=16)
-    loopThread = _thread.start_new_thread(loop, ())     # creating a thread so we don't use interrupt
-    serverThread = _thread.start_new_thread(createServer, ())   # creating a thread so we don't use interrupt
-
+    loopThread = _thread.start_new_thread(loop, ())  # creating a thread so we don't use interrupt
+    serverThread = _thread.start_new_thread(createServer, ())  # creating a thread so we don't use interrupt
