@@ -169,14 +169,13 @@ def createServer():
                         if '=' in post_data else (post_data, '')
                         for post_data in headers[headers.index('\r') + 1:]) if requestType == 'POST' else {}
 
-        print(activeApp, fileName)
         if fileName == 'stylesheet.css':  # accessing the stylesheet
             sendResponse(socketConnection, webPage('styleSheet'), contentType='text/css')
             continue
 
         if fileName == '' or fileName == 'index.html':  # accessing the main web page of local host ('' === '/')
-            activeApp = ''  # setting the current active app to empty string.
-            sendResponse(socketConnection, webPage())  # return response to the client and close the connection
+            activeApp = ''                              # setting the current active app to empty string.
+            sendResponse(socketConnection, webPage())   # return response to the client and close the connection
             continue  # jump to the loop control
 
         if fileName == 'mainapp/currentnumber' and activeApp == 'mainApp':
@@ -186,7 +185,7 @@ def createServer():
 
         if fileName == 'mainapp' or fileName == 'mainapp/index.html':
             activeApp = 'mainApp'
-            if requestType == 'POST':  # checking if the data is sent using post request
+            if requestType == 'POST':            # checking if the data is sent using post request
                 choice = postData.get('choice')  # get the value of choice if exists else it will return none
                 if choice == 'increment':
                     # if the user clicked increment button in front-end
