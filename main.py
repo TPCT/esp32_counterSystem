@@ -38,9 +38,12 @@ try:
 except Exception as e:
     pass
 
+# ================================================MAIN PROJECT VARIABLES================================================
 currentNumber = 0   # used to save the current number value
 oldNumber = -1      # used to save the last current number value (they are not equal to make lcd print the value at first run)
+# ======================================================================================================================
 
+# ================================================Door Project Variables================================================
 uSonic1 = ultraSonic(18, 19)    # used to bind with ultrasonic at pins 18, 19
 currentDistanceUSonic1 = 100    # used to save the distance read from ultrasonic
 doorStates = ('idle', 'request', 'rejected')    # used to send status for the front-end by indexing
@@ -48,6 +51,7 @@ doorRequest = 0x00  # 0x00 to close the door, 0x01 to open the door, 0x02 stop a
 lastDoorRequest = 0x03      # used to save the last door request (they are not equal to make lcd print the status at first run)
 clientsNumber = 0   # used to save the current clients number
 maxClientsNumber = 3    # used to save the max clients allowed to enter the place
+# ======================================================================================================================
 
 # the context manager will define readers that will read html file and will close file descriptors after exiting from context
 # open(filename, open_option) used to make file descriptor to r/w specific file
@@ -89,7 +93,7 @@ def generateAp(essid: str, password: str, authMode=network.AUTH_WPA2_PSK, maxCli
 
     while not ap.active():  # empty loop to hang the system up until the access point starts
         pass
-    
+
     pins['internalLed'].value(0)    # setting GPIO 2 to low after setting the server and access point
 
 
@@ -140,12 +144,12 @@ def createServer():
     global serverSocket, currentNumber, activeApp, \
         doorRequest, clientsNumber, currentDistanceUSonic1, \
         maxClientsNumber
-    
+
     serverSocket = socket.socket(socket.AF_INET,
                                  socket.SOCK_STREAM)  # creating web socket (address family ipv4, socket protocol TCP)
     serverSocket.bind(('', 80))     # binding the web socket at mcu local ip address at port 80 (web surfing port)
     serverSocket.listen(5)          # listening for incoming requests at max of 5 in queue before rejection
-    
+
     while True:
         socketConnection, clientAddress = serverSocket.accept()     # hanging up until a request is received
         request = socketConnection.recv(4096).decode('utf-8', 'ignore')  # reading the request data (4 bytes at once)
@@ -339,7 +343,7 @@ def mainApp():
         oldNumber = currentNumber
         lcd.writeString('current Num:' + str(currentNumber)) if lcd else None
     sleep_ms(250)
-    
+
 
 def doorApp():
     """

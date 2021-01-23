@@ -108,7 +108,7 @@ class LCD16X1:
         """
         self.dataByte[0] = data
         self.i2CProtocol.writeto(self.address, self.dataByte)
-        self.sleep_ms(1)
+        self.sleep_ms(2)
 
     def writeChar(self, char: chr, xPos=0):
         """
