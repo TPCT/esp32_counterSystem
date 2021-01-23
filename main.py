@@ -83,8 +83,6 @@ def generateAp(essid: str, password: str, authMode=network.AUTH_WPA2_PSK, maxCli
         :return: None
     """
 
-    global serverSocket  # declaring the global variable so it can be set inside the function
-
     ap = network.WLAN(network.AP_IF)  # setting the wlan interface to be access point (AP_IF)
     ap.config(essid=essid,
               password=password,
